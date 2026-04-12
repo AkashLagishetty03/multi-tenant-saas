@@ -1,14 +1,8 @@
-import axios from 'axios'
+import { api } from './api'
 
 const TOKEN_KEY = 'saas_token'
 
-const API_BASE_URL =
-  import.meta.env.VITE_API_URL?.trim() || 'http://localhost:5000'
-
-export const api = axios.create({
-  baseURL: API_BASE_URL,
-  headers: { 'Content-Type': 'application/json' },
-})
+api.defaults.headers.common['Content-Type'] = 'application/json'
 
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem(TOKEN_KEY)
@@ -32,7 +26,7 @@ api.interceptors.response.use(
   }
 )
 
-export { TOKEN_KEY }
+export { api, TOKEN_KEY }
 
 export async function loginRequest(email, password) {
   const { data } = await api.post('/api/auth/login', { email, password })

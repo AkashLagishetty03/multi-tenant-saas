@@ -10,12 +10,19 @@ const taskRoutes = require("./routes/taskRoutes");
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-const frontendOrigin = process.env.FRONTEND_URL?.trim();
 app.use(
   cors({
-    origin: frontendOrigin || true,
+    origin: [
+      "http://localhost:5173",
+      "https://multi-tenant-saas-pi.vercel.app",
+    ],
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    credentials: true,
   })
 );
+
+app.options("*", cors());
+
 app.use(express.json());
 
 // Routes
