@@ -33,6 +33,11 @@ export async function loginRequest(email, password) {
   return data
 }
 
+export async function registerRequest({ name, email, password, role, organizationName }) {
+  const { data } = await api.post('/api/auth/register', { name, email, password, role, organizationName })
+  return data
+}
+
 export async function fetchTasks(params = {}) {
   const { data } = await api.get('/api/tasks', {
     params: { page: 1, limit: 100, ...params },

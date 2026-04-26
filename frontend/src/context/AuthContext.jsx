@@ -5,7 +5,7 @@ import {
   useMemo,
   useState,
 } from 'react'
-import { loginRequest, TOKEN_KEY } from '../api/client'
+import { loginRequest, registerRequest, TOKEN_KEY } from '../api/client'
 
 const USER_KEY = 'saas_user'
 
@@ -33,6 +33,15 @@ export function AuthProvider({ children }) {
     return data
   }, [])
 
+  const register = useCallback(async ({ name, email, password, role, organizationName }) => {
+    const data = await registerRequest({ name, email, password, role, organizationName })
+    localStorage.setItem(TOKEN_KEY, data.token)
+    localStorage.setItem(USER_KEY, JSON.stringify(data.user))
+    setToken(data.token)
+    setUser(data.user)
+    return data
+  }, [])
+
   const logout = useCallback(() => {
     localStorage.removeItem(TOKEN_KEY)
     localStorage.removeItem(USER_KEY)
@@ -46,9 +55,10 @@ export function AuthProvider({ children }) {
       user,
       isAuthenticated: Boolean(token),
       login,
+      register,
       logout,
     }),
-    [token, user, login, logout]
+    [token, user, login, register, logout]
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
