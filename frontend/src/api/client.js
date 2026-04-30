@@ -53,3 +53,18 @@ export async function createTaskRequest(body) {
 export async function deleteTaskRequest(id) {
   await api.delete(`/api/tasks/${id}`)
 }
+
+export async function addEmployeeRequest({ name, email }) {
+  const { data } = await api.post('/api/auth/add-employee', { name, email })
+  return data
+}
+
+export async function fetchEmployees() {
+  const { data } = await api.get('/api/auth/employees')
+  return data
+}
+
+export async function updateTaskRequest(id, body) {
+  const { data } = await api.put(`/api/tasks/${id}`, body)
+  return data
+}

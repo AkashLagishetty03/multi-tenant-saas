@@ -17,6 +17,7 @@ const taskSchema = new mongoose.Schema(
       default: null,
     },
     dueDate: { type: Date, default: null },
+    submissionNotes: { type: String, trim: true, maxlength: 5000, default: "" },
     organizationId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Organization",

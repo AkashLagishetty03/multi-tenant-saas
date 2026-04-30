@@ -4,7 +4,7 @@ const mongoose = require("mongoose");
 const User = require("../models/User");
 const Organization = require("../models/Organization");
 const { ROLES } = require("../models/User");
-const { getJwtSecret } = require("../middleware/authMiddleware");
+const { getJwtSecret, authenticate, requireAdmin } = require("../middleware/authMiddleware");
 
 const router = express.Router();
 
@@ -159,6 +159,67 @@ router.post("/login", async (req, res, next) => {
       token,
       user: user.toJSON(),
     });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
+ * POST /api/auth/add-employee
+ * Admin only. Creates an employee in the admin's organization with a default password.
+ */
+router.post("/add-employee", authenticate, requireAdmin, async (req, res, next) => {
+  try {
+    const { name, email } = req.body;
+
+    if (!name || typeof name !== "string" || !name.trim()) {
+      return badRequest(res, "name is required");
+    }
+    if (!email || typeof email !== "string" || !EMAIL_RE.test(email.trim())) {
+      return badRequest(res, "Valid email is required");
+    }
+
+    const normalizedEmail = email.trim().toLowerCase();
+    const existing = await User.findOne({ email: normalizedEmail }).select("_id");
+    if (existing) {
+      return res.status(409).json({ message: "Email already registered" });
+    }
+
+    const user = await User.create({
+      name: name.trim(),
+      email: normalizedEmail,
+      password: "Welcome@123",
+      role: "employee",
+      organizationId: req.user.organizationId,
+    });
+
+    return res.status(201).json({
+      message: "Employee added successfully",
+      user: user.toJSON(),
+    });
+  } catch (err) {
+    if (err.code === 11000) {
+      return res.status(409).json({ message: "Email already registered" });
+    }
+    next(err);
+  }
+});
+
+/**
+ * GET /api/auth/employees
+ * Admin only. Lists all employees in the admin's organization.
+ */
+router.get("/employees", authenticate, requireAdmin, async (req, res, next) => {
+  try {
+    const employees = await User.find({
+      organizationId: req.user.organizationId,
+      role: "employee",
+    })
+      .select("name email role")
+      .sort({ name: 1 })
+      .lean();
+
+    return res.json({ employees });
   } catch (err) {
     next(err);
   }

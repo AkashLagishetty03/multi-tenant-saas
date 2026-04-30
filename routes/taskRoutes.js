@@ -201,6 +201,9 @@ router.get(
       }
 
       const filter = { organizationId: req.user.organizationId };
+      if (req.user.role === "employee") {
+        filter.assignedTo = req.user._id;
+      }
       if (status != null && status !== "") {
         filter.status = status;
       }
@@ -243,7 +246,7 @@ router.put(
   requireSameOrganization,
   async (req, res, next) => {
     try {
-      const { status, dueDate: dueDateInput } = req.body;
+      const { status, dueDate: dueDateInput, submissionNotes } = req.body;
       if (status == null) {
         return badRequest(res, "status is required");
       }
@@ -258,6 +261,9 @@ router.put(
           return badRequest(res, parsedDue.error);
         }
         req.task.dueDate = parsedDue.dueDate;
+      }
+      if (submissionNotes != null && typeof submissionNotes === "string") {
+        req.task.submissionNotes = submissionNotes.trim();
       }
       await req.task.save();
 

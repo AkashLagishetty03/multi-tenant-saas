@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { fetchTasks } from '../api/client'
+import { fetchTasks, addEmployeeRequest } from '../api/client'
 import { useAuth } from '../context/AuthContext'
 import { StatusBadge } from '../components/ui/StatusBadge'
 
@@ -22,6 +22,13 @@ export function DashboardPage() {
   const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+
+  // Add Employee form state
+  const [empName, setEmpName] = useState('')
+  const [empEmail, setEmpEmail] = useState('')
+  const [empLoading, setEmpLoading] = useState(false)
+  const [empError, setEmpError] = useState('')
+  const [empSuccess, setEmpSuccess] = useState('')
 
   useEffect(() => {
     let cancelled = false
@@ -48,6 +55,28 @@ export function DashboardPage() {
       cancelled = true
     }
   }, [])
+
+  async function handleAddEmployee(e) {
+    e.preventDefault()
+    setEmpError('')
+    setEmpSuccess('')
+    setEmpLoading(true)
+    try {
+      const data = await addEmployeeRequest({
+        name: empName.trim(),
+        email: empEmail.trim(),
+      })
+      setEmpName('')
+      setEmpEmail('')
+      setEmpSuccess(`${data.user.name} added successfully. Default password: Welcome@123`)
+    } catch (err) {
+      setEmpError(
+        err.response?.data?.message || err.message || 'Could not add employee.'
+      )
+    } finally {
+      setEmpLoading(false)
+    }
+  }
 
   const firstName = user?.name?.split(/\s+/)[0] || 'there'
 
@@ -82,6 +111,70 @@ export function DashboardPage() {
           <p className="mt-2 text-lg font-semibold text-slate-900">Active</p>
         </div>
       </div>
+
+      {/* Add Employee — admin only */}
+      {isAdmin ? (
+        <section className="rounded-xl border border-slate-200/80 bg-white p-4 shadow-md md:p-6">
+          <h2 className="text-lg font-semibold text-slate-900">Add Employee</h2>
+          <p className="mt-1 text-sm text-slate-500">
+            Add a team member to your organization. They&apos;ll get the default password <span className="font-medium text-slate-700">Welcome@123</span>.
+          </p>
+
+          <form onSubmit={handleAddEmployee} className="mt-5 flex flex-col gap-4">
+            {empError ? (
+              <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 shadow-md">
+                {empError}
+              </div>
+            ) : null}
+            {empSuccess ? (
+              <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900 shadow-md">
+                {empSuccess}
+              </div>
+            ) : null}
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label htmlFor="emp-name" className="mb-1.5 block text-sm font-medium text-slate-700">
+                  Name
+                </label>
+                <input
+                  id="emp-name"
+                  name="empName"
+                  type="text"
+                  required
+                  value={empName}
+                  onChange={(e) => setEmpName(e.target.value)}
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-400 focus:bg-white focus:ring-2 focus:ring-slate-900/10"
+                  placeholder="Jane Doe"
+                />
+              </div>
+              <div>
+                <label htmlFor="emp-email" className="mb-1.5 block text-sm font-medium text-slate-700">
+                  Email
+                </label>
+                <input
+                  id="emp-email"
+                  name="empEmail"
+                  type="email"
+                  required
+                  value={empEmail}
+                  onChange={(e) => setEmpEmail(e.target.value)}
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-400 focus:bg-white focus:ring-2 focus:ring-slate-900/10"
+                  placeholder="jane@company.com"
+                />
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={empLoading}
+              className="w-fit rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white shadow-md transition hover:bg-slate-800 hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {empLoading ? 'Adding…' : 'Add employee'}
+            </button>
+          </form>
+        </section>
+      ) : null}
 
       <section className="flex flex-col gap-4">
         <div className="flex flex-wrap items-end justify-between gap-4">

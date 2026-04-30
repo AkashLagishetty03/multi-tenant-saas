@@ -1,7 +1,18 @@
 import { useEffect, useState } from 'react'
-import { createTaskRequest, deleteTaskRequest, fetchTasks } from '../api/client'
+import { createTaskRequest, deleteTaskRequest, fetchTasks, fetchEmployees } from '../api/client'
 import { useAuth } from '../context/AuthContext'
 import { StatusBadge } from '../components/ui/StatusBadge'
+
+function formatDate(value) {
+  if (!value) return '—'
+  const d = new Date(value)
+  if (Number.isNaN(d.getTime())) return '—'
+  return d.toLocaleDateString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  })
+}
 
 export function TasksPage() {
   const { user } = useAuth()
@@ -9,11 +20,14 @@ export function TasksPage() {
 
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
+  const [assignedTo, setAssignedTo] = useState('')
+  const [dueDate, setDueDate] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [formError, setFormError] = useState('')
   const [formSuccess, setFormSuccess] = useState('')
 
   const [tasks, setTasks] = useState([])
+  const [employees, setEmployees] = useState([])
   const [loading, setLoading] = useState(true)
   const [listError, setListError] = useState('')
   const [deletingId, setDeletingId] = useState(null)
@@ -33,12 +47,20 @@ export function TasksPage() {
     ;(async () => {
       setLoading(true)
       await loadTasks()
+      if (isAdmin) {
+        try {
+          const empData = await fetchEmployees()
+          if (!cancelled) setEmployees(empData.employees ?? [])
+        } catch (e) {
+          console.error("Failed to load employees", e)
+        }
+      }
       if (!cancelled) setLoading(false)
     })()
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [isAdmin])
 
   async function handleDelete(taskId) {
     setListError('')
@@ -64,9 +86,13 @@ export function TasksPage() {
       await createTaskRequest({
         title: title.trim(),
         description: description.trim(),
+        assignedTo: assignedTo || undefined,
+        dueDate: dueDate || undefined,
       })
       setTitle('')
       setDescription('')
+      setAssignedTo('')
+      setDueDate('')
       setFormSuccess('Task created successfully.')
       await loadTasks()
     } catch (err) {
@@ -143,6 +169,39 @@ export function TasksPage() {
               />
             </div>
 
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label htmlFor="task-assignee" className="mb-1.5 block text-sm font-medium text-slate-700">
+                  Assign To
+                </label>
+                <select
+                  id="task-assignee"
+                  value={assignedTo}
+                  onChange={(e) => setAssignedTo(e.target.value)}
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-400 focus:bg-white focus:ring-2 focus:ring-slate-900/10"
+                >
+                  <option value="">Unassigned</option>
+                  {employees.map((emp) => (
+                    <option key={emp._id} value={emp._id}>
+                      {emp.name} ({emp.email})
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label htmlFor="task-due-date" className="mb-1.5 block text-sm font-medium text-slate-700">
+                  Due Date
+                </label>
+                <input
+                  id="task-due-date"
+                  type="date"
+                  value={dueDate}
+                  onChange={(e) => setDueDate(e.target.value)}
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-400 focus:bg-white focus:ring-2 focus:ring-slate-900/10"
+                />
+              </div>
+            </div>
+
             <button
               type="submit"
               disabled={submitting}
@@ -190,6 +249,12 @@ export function TasksPage() {
                 ) : (
                   <p className="flex-1 text-sm italic text-slate-400">No description</p>
                 )}
+                
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-slate-500">
+                  <span>Assignee: <span className="font-medium text-slate-700">{task.assignedTo?.name || 'Unassigned'}</span></span>
+                  <span>Due: <span className="font-medium text-slate-700">{formatDate(task.dueDate)}</span></span>
+                </div>
+
                 {isAdmin ? (
                   <div className="mt-auto flex justify-end border-t border-slate-100 pt-3">
                     <button
