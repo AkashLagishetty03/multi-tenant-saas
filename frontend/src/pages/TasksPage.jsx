@@ -2,6 +2,13 @@ import { useEffect, useState } from 'react'
 import { createTaskRequest, deleteTaskRequest, fetchTasks, fetchEmployees } from '../api/client'
 import { useAuth } from '../context/AuthContext'
 import { StatusBadge } from '../components/ui/StatusBadge'
+import { PageHeader } from '../components/ui/PageHeader'
+import { Button } from '../components/ui/Button'
+import { Card } from '../components/ui/Card'
+import { Modal } from '../components/ui/Modal'
+import { Input } from '../components/ui/Input'
+import { EmptyState } from '../components/ui/EmptyState'
+import { Plus, Trash2, Calendar, User, CheckSquare } from 'lucide-react'
 
 function formatDate(value) {
   if (!value) return '—'
@@ -18,13 +25,13 @@ export function TasksPage() {
   const { user } = useAuth()
   const isAdmin = user?.role === 'admin'
 
+  const [isModalOpen, setIsModalOpen] = useState(false)
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [assignedTo, setAssignedTo] = useState('')
   const [dueDate, setDueDate] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [formError, setFormError] = useState('')
-  const [formSuccess, setFormSuccess] = useState('')
 
   const [tasks, setTasks] = useState([])
   const [employees, setEmployees] = useState([])
@@ -69,8 +76,7 @@ export function TasksPage() {
       await deleteTaskRequest(taskId)
       setTasks((prev) => prev.filter((t) => t._id !== taskId))
     } catch (err) {
-      const msg =
-        err.response?.data?.message || err.message || 'Could not delete task.'
+      const msg = err.response?.data?.message || err.message || 'Could not delete task.'
       setListError(msg)
     } finally {
       setDeletingId(null)
@@ -80,7 +86,6 @@ export function TasksPage() {
   async function handleSubmit(e) {
     e.preventDefault()
     setFormError('')
-    setFormSuccess('')
     setSubmitting(true)
     try {
       await createTaskRequest({
@@ -93,13 +98,10 @@ export function TasksPage() {
       setDescription('')
       setAssignedTo('')
       setDueDate('')
-      setFormSuccess('Task created successfully.')
+      setIsModalOpen(false)
       await loadTasks()
     } catch (err) {
-      const msg =
-        err.response?.data?.message ||
-        err.message ||
-        'Could not create task.'
+      const msg = err.response?.data?.message || err.message || 'Could not create task.'
       setFormError(msg)
     } finally {
       setSubmitting(false)
@@ -107,171 +109,163 @@ export function TasksPage() {
   }
 
   return (
-    <div className="flex flex-col gap-4 md:gap-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Tasks</h1>
-        <p className="mt-2 text-slate-600">
-          {isAdmin
-            ? 'Create work items for your organization and keep the queue up to date.'
-            : 'Review work items for your organization. Admins manage task creation and removal.'}
-        </p>
-      </div>
+    <>
+      <PageHeader 
+        title="Tasks"
+        description={isAdmin ? 'Manage work items across your organization.' : 'Review your assigned work items.'}
+        action={
+          isAdmin && (
+            <Button onClick={() => setIsModalOpen(true)}>
+              <Plus className="w-4 h-4 mr-2" />
+              New Task
+            </Button>
+          )
+        }
+      />
 
-      {isAdmin ? (
-        <section className="rounded-xl border border-slate-200/80 bg-white p-4 shadow-md md:p-6">
-          <h2 className="text-lg font-semibold text-slate-900">Create a task</h2>
-          <p className="mt-1 text-sm text-slate-500">
-            Give it a clear title so your team knows what to do next.
-          </p>
-
-          <form onSubmit={handleSubmit} className="mt-6 flex flex-col gap-4">
-            {formError ? (
-              <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 shadow-md">
-                {formError}
-              </div>
-            ) : null}
-            {formSuccess ? (
-              <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900 shadow-md">
-                {formSuccess}
-              </div>
-            ) : null}
-
-            <div>
-              <label htmlFor="task-title" className="mb-1.5 block text-sm font-medium text-slate-700">
-                Title
-              </label>
-              <input
-                id="task-title"
-                name="title"
-                required
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-400 focus:bg-white focus:ring-2 focus:ring-slate-900/10"
-                placeholder="e.g. Onboard new tenant schema"
-              />
-            </div>
-
-            <div>
-              <label
-                htmlFor="task-description"
-                className="mb-1.5 block text-sm font-medium text-slate-700"
-              >
-                Description
-              </label>
-              <textarea
-                id="task-description"
-                name="description"
-                rows={4}
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                className="w-full resize-y rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-400 focus:bg-white focus:ring-2 focus:ring-slate-900/10"
-                placeholder="Context, acceptance criteria, or links…"
-              />
-            </div>
-
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <label htmlFor="task-assignee" className="mb-1.5 block text-sm font-medium text-slate-700">
-                  Assign To
-                </label>
-                <select
-                  id="task-assignee"
-                  value={assignedTo}
-                  onChange={(e) => setAssignedTo(e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-400 focus:bg-white focus:ring-2 focus:ring-slate-900/10"
-                >
-                  <option value="">Unassigned</option>
-                  {employees.map((emp) => (
-                    <option key={emp._id} value={emp._id}>
-                      {emp.name} ({emp.email})
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label htmlFor="task-due-date" className="mb-1.5 block text-sm font-medium text-slate-700">
-                  Due Date
-                </label>
-                <input
-                  id="task-due-date"
-                  type="date"
-                  value={dueDate}
-                  onChange={(e) => setDueDate(e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-400 focus:bg-white focus:ring-2 focus:ring-slate-900/10"
-                />
-              </div>
-            </div>
-
-            <button
-              type="submit"
-              disabled={submitting}
-              className="w-fit rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white shadow-md transition hover:bg-slate-800 hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {submitting ? 'Loading...' : 'Create task'}
-            </button>
-          </form>
-        </section>
-      ) : null}
-
-      <section className="flex flex-col gap-4">
-        <div>
-          <h2 className="text-lg font-semibold text-slate-900">All tasks</h2>
-          <p className="mt-1 text-sm text-slate-500">Cards for a quick scan of status</p>
+      {listError && (
+        <div className="mb-6 rounded-lg bg-red-50 p-4 border border-red-200 text-sm text-red-800">
+          {listError}
         </div>
+      )}
 
-        {listError ? (
-          <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 shadow-md">
-            {listError}
-          </div>
-        ) : null}
+      {loading ? (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {[1, 2, 3].map(i => (
+            <Card key={i} className="animate-pulse h-40 bg-surface-50" />
+          ))}
+        </div>
+      ) : tasks.length === 0 ? (
+        <EmptyState 
+          icon={CheckSquare}
+          title="No tasks found"
+          description={isAdmin ? "Get started by creating a new task for your team." : "You're all caught up!"}
+          action={isAdmin ? <Button onClick={() => setIsModalOpen(true)}>Create Task</Button> : null}
+        />
+      ) : (
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {tasks.map((task) => (
+            <Card key={task._id} className="flex flex-col hover:shadow-dropdown transition-shadow">
+              <div className="flex items-start justify-between gap-3 mb-3">
+                <h3 className="font-semibold text-ink-900 line-clamp-1" title={task.title}>{task.title}</h3>
+                <StatusBadge status={task.status} />
+              </div>
+              
+              <p className="text-sm text-ink-500 mb-4 line-clamp-2 flex-1">
+                {task.description || 'No description provided.'}
+              </p>
 
-        {loading ? (
-          <div className="rounded-xl border border-dashed border-slate-200 bg-white/60 px-4 py-14 text-center text-sm text-slate-500 shadow-md">
-            Loading...
+              <div className="flex flex-col gap-2 mt-auto pt-4 border-t border-surface-100">
+                <div className="flex items-center gap-2 text-xs text-ink-500">
+                  <User className="w-3.5 h-3.5" />
+                  <span className="truncate">{task.assignedTo?.name || 'Unassigned'}</span>
+                </div>
+                <div className="flex items-center gap-2 text-xs text-ink-500">
+                  <Calendar className="w-3.5 h-3.5" />
+                  <span>{formatDate(task.dueDate)}</span>
+                </div>
+              </div>
+
+              {isAdmin && (
+                <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                  {/* Keeping standard flow but putting actions inside if needed, or stick to the bottom right. Let's add delete to the bottom for mobile friendliness. */}
+                </div>
+              )}
+              {isAdmin && (
+                <div className="mt-4 flex justify-end">
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                    onClick={() => handleDelete(task._id)}
+                    isLoading={deletingId === task._id}
+                  >
+                    <Trash2 className="w-4 h-4 mr-1.5" />
+                    Delete
+                  </Button>
+                </div>
+              )}
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {/* Admin Create Task Modal */}
+      <Modal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        title="Create New Task"
+        maxWidth="max-w-xl"
+      >
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {formError && (
+            <div className="rounded-lg bg-red-50 p-3 text-sm text-red-800 border border-red-200">
+              {formError}
+            </div>
+          )}
+
+          <Input
+            label="Title"
+            id="task-title"
+            required
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="e.g. Onboard new tenant schema"
+          />
+
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="task-description" className="text-sm font-medium text-ink-800">
+              Description
+            </label>
+            <textarea
+              id="task-description"
+              rows={4}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              className="w-full px-3 py-2 bg-white border border-surface-200 rounded-lg shadow-sm text-sm placeholder-ink-400 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 resize-y"
+              placeholder="Context, acceptance criteria, or links…"
+            />
           </div>
-        ) : tasks.length === 0 ? (
-          <div className="rounded-xl border border-slate-200/80 bg-white p-10 text-center text-sm text-slate-500 shadow-md">
-            No tasks to show.
-          </div>
-        ) : (
-          <ul className="grid gap-4 sm:grid-cols-2">
-            {tasks.map((task) => (
-              <li
-                key={task._id}
-                className="flex flex-col gap-4 rounded-xl border border-slate-200/80 bg-white p-4 shadow-md transition hover:shadow-lg"
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="task-assignee" className="text-sm font-medium text-ink-800">
+                Assignee
+              </label>
+              <select
+                id="task-assignee"
+                value={assignedTo}
+                onChange={(e) => setAssignedTo(e.target.value)}
+                className="w-full px-3 py-2 bg-white border border-surface-200 rounded-lg shadow-sm text-sm text-ink-900 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
               >
-                <div className="flex items-start justify-between gap-3">
-                  <h3 className="min-w-0 flex-1 font-semibold text-slate-900">{task.title}</h3>
-                  <StatusBadge status={task.status} />
-                </div>
-                {task.description ? (
-                  <p className="flex-1 text-sm leading-relaxed text-slate-600">{task.description}</p>
-                ) : (
-                  <p className="flex-1 text-sm italic text-slate-400">No description</p>
-                )}
-                
-                <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-slate-500">
-                  <span>Assignee: <span className="font-medium text-slate-700">{task.assignedTo?.name || 'Unassigned'}</span></span>
-                  <span>Due: <span className="font-medium text-slate-700">{formatDate(task.dueDate)}</span></span>
-                </div>
+                <option value="">Unassigned</option>
+                {employees.map((emp) => (
+                  <option key={emp._id} value={emp._id}>
+                    {emp.name} ({emp.email})
+                  </option>
+                ))}
+              </select>
+            </div>
+            
+            <Input
+              label="Due Date"
+              id="task-due-date"
+              type="date"
+              value={dueDate}
+              onChange={(e) => setDueDate(e.target.value)}
+            />
+          </div>
 
-                {isAdmin ? (
-                  <div className="mt-auto flex justify-end border-t border-slate-100 pt-3">
-                    <button
-                      type="button"
-                      onClick={() => handleDelete(task._id)}
-                      disabled={deletingId === task._id}
-                      className="rounded-xl border border-red-200 bg-white px-4 py-2 text-sm font-medium text-red-700 shadow-sm transition hover:border-red-300 hover:bg-red-50 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-                      {deletingId === task._id ? 'Loading...' : 'Delete'}
-                    </button>
-                  </div>
-                ) : null}
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-    </div>
+          <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-surface-100">
+            <Button type="button" variant="ghost" onClick={() => setIsModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" isLoading={submitting}>
+              Create Task
+            </Button>
+          </div>
+        </form>
+      </Modal>
+    </>
   )
 }

@@ -2,6 +2,12 @@ import { useEffect, useState } from 'react'
 import { fetchTasks, updateTaskRequest } from '../api/client'
 import { useAuth } from '../context/AuthContext'
 import { StatusBadge } from '../components/ui/StatusBadge'
+import { PageHeader } from '../components/ui/PageHeader'
+import { StatCard } from '../components/ui/StatCard'
+import { Card } from '../components/ui/Card'
+import { Button } from '../components/ui/Button'
+import { EmptyState } from '../components/ui/EmptyState'
+import { CheckCircle2, CircleDashed, CheckSquare, Calendar, Loader2 } from 'lucide-react'
 
 function formatDate(value) {
   if (!value) return '—'
@@ -16,7 +22,7 @@ function formatDate(value) {
 
 const STATUS_OPTIONS = [
   { value: 'pending', label: 'Pending' },
-  { value: 'in-progress', label: 'In Progress' },
+  { value: 'in_progress', label: 'In Progress' },
   { value: 'completed', label: 'Completed' },
 ]
 
@@ -91,124 +97,128 @@ export function EmployeeDashboardPage() {
   const firstName = user?.name?.split(/\s+/)[0] || 'there'
 
   return (
-    <div className="flex flex-col gap-4 md:gap-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight text-slate-900 md:text-3xl">
-          Hello, {firstName}
-        </h1>
-        <p className="mt-2 max-w-2xl text-slate-600">
-          Here are the tasks assigned to you. Update status or add notes as you make progress.
-        </p>
+    <>
+      <PageHeader 
+        title={`My Workspace, ${firstName}`}
+        description="Here are the tasks assigned to you. Update status or add notes as you make progress."
+      />
+
+      <div className="grid gap-6 sm:grid-cols-3 mb-8">
+        <StatCard 
+          title="Total Assigned" 
+          value={tasks.length} 
+          icon={CheckSquare}
+        />
+        <StatCard 
+          title="In Progress" 
+          value={tasks.filter((t) => t.status === 'in_progress').length} 
+          icon={CircleDashed}
+          className="text-blue-700"
+        />
+        <StatCard 
+          title="Completed" 
+          value={tasks.filter((t) => t.status === 'completed').length} 
+          icon={CheckCircle2}
+          className="text-emerald-700"
+        />
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-3">
-        <div className="rounded-xl border border-slate-200/80 bg-white p-4 shadow-md">
-          <p className="text-sm font-medium text-slate-500">My tasks</p>
-          <p className="mt-2 text-3xl font-semibold tabular-nums text-slate-900">{tasks.length}</p>
-        </div>
-        <div className="rounded-xl border border-slate-200/80 bg-white p-4 shadow-md">
-          <p className="text-sm font-medium text-slate-500">Completed</p>
-          <p className="mt-2 text-3xl font-semibold tabular-nums text-emerald-700">
-            {tasks.filter((t) => t.status === 'completed').length}
-          </p>
-        </div>
-        <div className="rounded-xl border border-slate-200/80 bg-white p-4 shadow-md">
-          <p className="text-sm font-medium text-slate-500">In progress</p>
-          <p className="mt-2 text-3xl font-semibold tabular-nums text-blue-700">
-            {tasks.filter((t) => t.status === 'in-progress').length}
-          </p>
-        </div>
-      </div>
-
-      {error ? (
-        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 shadow-md">
+      {error && (
+        <div className="mb-6 rounded-lg bg-red-50 p-4 border border-red-200 text-sm text-red-800">
           {error}
         </div>
-      ) : null}
+      )}
+
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-lg font-semibold text-ink-900">Assigned Tasks</h2>
+      </div>
 
       {loading ? (
-        <div className="rounded-xl border border-dashed border-slate-200 bg-white/60 px-4 py-16 text-center text-sm text-slate-500 shadow-md">
-          Loading...
+        <div className="space-y-4">
+          {[1, 2, 3].map(i => (
+            <Card key={i} className="animate-pulse h-32 bg-surface-50" />
+          ))}
         </div>
       ) : tasks.length === 0 ? (
-        <div className="rounded-xl border border-slate-200/80 bg-white p-10 text-center shadow-md">
-          <p className="text-slate-600">No tasks assigned to you yet.</p>
-          <p className="mt-2 text-sm text-slate-500">
-            Your admin will assign tasks when ready.
-          </p>
-        </div>
+        <EmptyState 
+          icon={CheckSquare}
+          title="No tasks assigned"
+          description="Your admin will assign tasks when ready. You're all caught up for now!"
+        />
       ) : (
-        <ul className="flex flex-col gap-4">
+        <div className="flex flex-col gap-6">
           {tasks.map((task) => (
-            <li
-              key={task._id}
-              className="flex flex-col gap-4 rounded-xl border border-slate-200/80 bg-white p-5 shadow-md transition hover:shadow-lg"
-            >
-              <div className="flex flex-wrap items-start justify-between gap-3">
+            <Card key={task._id} className="flex flex-col transition-shadow hover:shadow-dropdown">
+              <div className="flex flex-wrap items-start justify-between gap-4 mb-4">
                 <div className="min-w-0 flex-1">
-                  <h3 className="font-semibold text-slate-900">{task.title}</h3>
-                  {task.description ? (
-                    <p className="mt-1 text-sm leading-relaxed text-slate-600">{task.description}</p>
-                  ) : (
-                    <p className="mt-1 text-sm italic text-slate-400">No description</p>
-                  )}
+                  <h3 className="text-lg font-semibold text-ink-900 mb-1">{task.title}</h3>
+                  <div className="flex items-center gap-2 text-xs text-ink-500 font-medium">
+                    <Calendar className="w-3.5 h-3.5" />
+                    <span>Due {formatDate(task.dueDate)}</span>
+                  </div>
                 </div>
                 <StatusBadge status={task.status} />
               </div>
 
-              <div className="flex flex-wrap items-center gap-4 text-sm text-slate-500">
-                <span>Due: {formatDate(task.dueDate)}</span>
+              <div className="mb-6">
+                <p className="text-sm leading-relaxed text-ink-700">
+                  {task.description || <span className="italic text-ink-400">No description provided</span>}
+                </p>
               </div>
 
-              <div className="flex flex-col gap-3 border-t border-slate-100 pt-4">
-                <div className="flex flex-wrap items-center gap-3">
-                  <label htmlFor={`status-${task._id}`} className="text-sm font-medium text-slate-700">
-                    Status
-                  </label>
-                  <select
-                    id={`status-${task._id}`}
-                    value={task.status}
-                    onChange={(e) => handleStatusChange(task._id, e.target.value)}
-                    disabled={updatingId === task._id}
-                    className="rounded-xl border border-slate-200 bg-slate-50/50 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-slate-400 focus:bg-white focus:ring-2 focus:ring-slate-900/10 disabled:opacity-60"
-                  >
-                    {STATUS_OPTIONS.map((opt) => (
-                      <option key={opt.value} value={opt.value}>{opt.label}</option>
-                    ))}
-                  </select>
-                  {updatingId === task._id ? (
-                    <span className="text-xs text-slate-400">Saving…</span>
-                  ) : null}
-                </div>
-
+              <div className="grid md:grid-cols-2 gap-6 pt-6 border-t border-surface-100">
+                {/* Status Update */}
                 <div className="flex flex-col gap-2">
-                  <label htmlFor={`notes-${task._id}`} className="text-sm font-medium text-slate-700">
-                    Submission notes / link
+                  <label htmlFor={`status-${task._id}`} className="text-sm font-medium text-ink-800">
+                    Update Status
                   </label>
-                  <textarea
-                    id={`notes-${task._id}`}
-                    rows={2}
-                    value={notesMap[task._id] ?? ''}
-                    onChange={(e) =>
-                      setNotesMap((prev) => ({ ...prev, [task._id]: e.target.value }))
-                    }
-                    placeholder="Add a link, comment, or completion note…"
-                    className="w-full resize-y rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400 focus:bg-white focus:ring-2 focus:ring-slate-900/10"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => handleSubmitNotes(task._id)}
-                    disabled={updatingId === task._id}
-                    className="w-fit rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    {updatingId === task._id ? 'Saving…' : 'Save notes'}
-                  </button>
+                  <div className="flex items-center gap-3">
+                    <select
+                      id={`status-${task._id}`}
+                      value={task.status}
+                      onChange={(e) => handleStatusChange(task._id, e.target.value)}
+                      disabled={updatingId === task._id}
+                      className="flex-1 rounded-lg border border-surface-200 bg-white px-3 py-2 text-sm text-ink-900 outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 disabled:opacity-60 disabled:bg-surface-50"
+                    >
+                      {STATUS_OPTIONS.map((opt) => (
+                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                      ))}
+                    </select>
+                    {updatingId === task._id && <Loader2 className="w-4 h-4 text-ink-400 animate-spin" />}
+                  </div>
+                </div>
+
+                {/* Submission Notes */}
+                <div className="flex flex-col gap-2">
+                  <label htmlFor={`notes-${task._id}`} className="text-sm font-medium text-ink-800">
+                    Submission Notes / Links
+                  </label>
+                  <div className="flex items-start gap-3">
+                    <textarea
+                      id={`notes-${task._id}`}
+                      rows={1}
+                      value={notesMap[task._id] ?? ''}
+                      onChange={(e) =>
+                        setNotesMap((prev) => ({ ...prev, [task._id]: e.target.value }))
+                      }
+                      placeholder="Add a link or note…"
+                      className="flex-1 resize-y min-h-[42px] rounded-lg border border-surface-200 bg-white px-3 py-2 text-sm text-ink-900 outline-none transition placeholder:text-ink-400 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20"
+                    />
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      onClick={() => handleSubmitNotes(task._id)}
+                      isLoading={updatingId === task._id}
+                    >
+                      Save Note
+                    </Button>
+                  </div>
                 </div>
               </div>
-            </li>
+            </Card>
           ))}
-        </ul>
+        </div>
       )}
-    </div>
+    </>
   )
 }

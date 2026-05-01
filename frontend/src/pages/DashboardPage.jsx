@@ -3,6 +3,14 @@ import { Link } from 'react-router-dom'
 import { fetchTasks, addEmployeeRequest } from '../api/client'
 import { useAuth } from '../context/AuthContext'
 import { StatusBadge } from '../components/ui/StatusBadge'
+import { StatCard } from '../components/ui/StatCard'
+import { Card } from '../components/ui/Card'
+import { DataTable } from '../components/ui/DataTable'
+import { PageHeader } from '../components/ui/PageHeader'
+import { Button } from '../components/ui/Button'
+import { Input } from '../components/ui/Input'
+import { Modal } from '../components/ui/Modal'
+import { Users, CheckSquare, Shield, Plus, Building2 } from 'lucide-react'
 
 function formatDate(value) {
   if (!value) return '—'
@@ -23,7 +31,8 @@ export function DashboardPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
-  // Add Employee form state
+  // Add Employee Modal
+  const [isEmployeeModalOpen, setIsEmployeeModalOpen] = useState(false)
   const [empName, setEmpName] = useState('')
   const [empEmail, setEmpEmail] = useState('')
   const [empLoading, setEmpLoading] = useState(false)
@@ -36,7 +45,7 @@ export function DashboardPage() {
       setLoading(true)
       setError('')
       try {
-        const data = await fetchTasks({ limit: 50 })
+        const data = await fetchTasks({ limit: 5 })
         if (!cancelled) {
           setTasks(data.tasks ?? [])
           setTotal(data.total ?? 0)
@@ -69,6 +78,8 @@ export function DashboardPage() {
       setEmpName('')
       setEmpEmail('')
       setEmpSuccess(`${data.user.name} added successfully. Default password: Welcome@123`)
+      // Close modal after short delay
+      setTimeout(() => setIsEmployeeModalOpen(false), 3000)
     } catch (err) {
       setEmpError(
         err.response?.data?.message || err.message || 'Could not add employee.'
@@ -80,182 +91,132 @@ export function DashboardPage() {
 
   const firstName = user?.name?.split(/\s+/)[0] || 'there'
 
-  return (
-    <div className="flex flex-col gap-4 md:gap-6">
+  const columns = [
+    { header: 'Title', cell: (row) => (
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight text-slate-900 md:text-3xl">
-          Hello, {firstName}
-        </h1>
-        <p className="mt-2 max-w-2xl text-slate-600">
-          Here&apos;s a snapshot of work across your organization. Open{' '}
-          <Link to="/tasks" className="font-medium text-slate-900 underline-offset-2 hover:underline">
-            Tasks
-          </Link>{' '}
-          to create or review items in detail.
-        </p>
+        <div className="font-medium text-ink-900">{row.title}</div>
+        <div className="text-xs text-ink-500 truncate max-w-xs">{row.description}</div>
+      </div>
+    )},
+    { header: 'Status', cell: (row) => <StatusBadge status={row.status} /> },
+    { header: 'Due Date', cell: (row) => formatDate(row.dueDate) }
+  ]
+
+  return (
+    <>
+      <PageHeader 
+        title={`Welcome back, ${firstName}`}
+        description="Here's a snapshot of work across your organization."
+        action={
+          isAdmin ? (
+            <Button onClick={() => setIsEmployeeModalOpen(true)}>
+              <Plus className="w-4 h-4 mr-2" />
+              Add Employee
+            </Button>
+          ) : null
+        }
+      />
+
+      <div className="grid gap-6 sm:grid-cols-3 mb-8">
+        <StatCard 
+          title="Total Tasks" 
+          value={total} 
+          icon={CheckSquare}
+          trend="up"
+          trendLabel="Active"
+        />
+        <StatCard 
+          title="Your Role" 
+          value={user?.role} 
+          icon={Shield} 
+          className="capitalize"
+        />
+        <StatCard 
+          title="Workspace" 
+          value="Active" 
+          icon={Building2} 
+        />
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-3">
-        <div className="rounded-xl border border-slate-200/80 bg-white p-4 shadow-md">
-          <p className="text-sm font-medium text-slate-500">Total tasks</p>
-          <p className="mt-2 text-3xl font-semibold tabular-nums text-slate-900">{total}</p>
-        </div>
-        <div className="rounded-xl border border-slate-200/80 bg-white p-4 shadow-md">
-          <p className="text-sm font-medium text-slate-500">Your role</p>
-          <p className="mt-2 text-lg font-semibold capitalize text-slate-900">
-            {user?.role ?? '—'}
-          </p>
-        </div>
-        <div className="rounded-xl border border-slate-200/80 bg-white p-4 shadow-md">
-          <p className="text-sm font-medium text-slate-500">Workspace</p>
-          <p className="mt-2 text-lg font-semibold text-slate-900">Active</p>
-        </div>
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-lg font-semibold text-ink-900">Recent Tasks</h2>
+        <Link to="/tasks">
+          <Button variant="ghost" size="sm">View all tasks</Button>
+        </Link>
       </div>
 
-      {/* Add Employee — admin only */}
-      {isAdmin ? (
-        <section className="rounded-xl border border-slate-200/80 bg-white p-4 shadow-md md:p-6">
-          <h2 className="text-lg font-semibold text-slate-900">Add Employee</h2>
-          <p className="mt-1 text-sm text-slate-500">
-            Add a team member to your organization. They&apos;ll get the default password <span className="font-medium text-slate-700">Welcome@123</span>.
-          </p>
+      {error && (
+        <div className="mb-4 rounded-lg bg-red-50 p-4 border border-red-200 text-sm text-red-800">
+          {error}
+        </div>
+      )}
 
-          <form onSubmit={handleAddEmployee} className="mt-5 flex flex-col gap-4">
-            {empError ? (
-              <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 shadow-md">
-                {empError}
-              </div>
-            ) : null}
-            {empSuccess ? (
-              <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900 shadow-md">
-                {empSuccess}
-              </div>
-            ) : null}
+      {loading ? (
+        <Card className="animate-pulse h-48 flex items-center justify-center">
+          <div className="text-ink-400">Loading tasks...</div>
+        </Card>
+      ) : (
+        <DataTable 
+          columns={columns} 
+          data={tasks} 
+          keyField="_id" 
+        />
+      )}
 
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <label htmlFor="emp-name" className="mb-1.5 block text-sm font-medium text-slate-700">
-                  Name
-                </label>
-                <input
-                  id="emp-name"
-                  name="empName"
-                  type="text"
-                  required
-                  value={empName}
-                  onChange={(e) => setEmpName(e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-400 focus:bg-white focus:ring-2 focus:ring-slate-900/10"
-                  placeholder="Jane Doe"
-                />
-              </div>
-              <div>
-                <label htmlFor="emp-email" className="mb-1.5 block text-sm font-medium text-slate-700">
-                  Email
-                </label>
-                <input
-                  id="emp-email"
-                  name="empEmail"
-                  type="email"
-                  required
-                  value={empEmail}
-                  onChange={(e) => setEmpEmail(e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-400 focus:bg-white focus:ring-2 focus:ring-slate-900/10"
-                  placeholder="jane@company.com"
-                />
-              </div>
+      {/* Admin Add Employee Modal */}
+      <Modal 
+        isOpen={isEmployeeModalOpen} 
+        onClose={() => {
+          setIsEmployeeModalOpen(false)
+          setEmpSuccess('')
+          setEmpError('')
+        }}
+        title="Add New Employee"
+      >
+        <form onSubmit={handleAddEmployee} className="space-y-4">
+          {empError && (
+            <div className="rounded-lg bg-red-50 p-3 text-sm text-red-800 border border-red-200">
+              {empError}
             </div>
-
-            <button
-              type="submit"
-              disabled={empLoading}
-              className="w-fit rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white shadow-md transition hover:bg-slate-800 hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {empLoading ? 'Adding…' : 'Add employee'}
-            </button>
-          </form>
-        </section>
-      ) : null}
-
-      <section className="flex flex-col gap-4">
-        <div className="flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <h2 className="text-lg font-semibold text-slate-900">Recent tasks</h2>
-            <p className="text-sm text-slate-500">Latest updates in your organization</p>
-          </div>
-          {isAdmin ? (
-            <Link
-              to="/tasks"
-              className="rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-medium text-white shadow-md transition hover:bg-slate-800 hover:shadow-lg"
-            >
-              New task
-            </Link>
-          ) : (
-            <Link
-              to="/tasks"
-              className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-800 shadow-md transition hover:border-slate-300 hover:bg-slate-50 hover:shadow-lg"
-            >
-              View tasks
-            </Link>
           )}
-        </div>
-
-        {error ? (
-          <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 shadow-md">
-            {error}
-          </div>
-        ) : null}
-
-        {loading ? (
-          <div className="rounded-xl border border-dashed border-slate-200 bg-white/60 px-4 py-16 text-center text-sm text-slate-500 shadow-md">
-            Loading...
-          </div>
-        ) : tasks.length === 0 ? (
-          <div className="rounded-xl border border-slate-200/80 bg-white p-10 text-center shadow-md">
-            <p className="text-slate-600">No tasks yet.</p>
-            <p className="mt-2 text-sm text-slate-500">
-              Admins can create tasks from the Tasks page.
-            </p>
-            <Link
-              to="/tasks"
-              className="mt-6 inline-flex rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-medium text-white shadow-md transition hover:bg-slate-800 hover:shadow-lg"
-            >
-              Go to Tasks
-            </Link>
-          </div>
-        ) : (
-          <div className="overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-md">
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[640px] text-left text-sm">
-                <thead>
-                  <tr className="border-b border-slate-100 bg-slate-50/80">
-                    <th className="px-5 py-3 font-medium text-slate-600">Title</th>
-                    <th className="px-5 py-3 font-medium text-slate-600">Status</th>
-                    <th className="px-5 py-3 font-medium text-slate-600">Due</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {tasks.map((task) => (
-                    <tr key={task._id} className="transition hover:bg-slate-50/80">
-                      <td className="px-5 py-4">
-                        <p className="font-medium text-slate-900">{task.title}</p>
-                        {task.description ? (
-                          <p className="mt-0.5 line-clamp-2 text-slate-500">{task.description}</p>
-                        ) : null}
-                      </td>
-                      <td className="px-5 py-4 align-top">
-                        <StatusBadge status={task.status} />
-                      </td>
-                      <td className="px-5 py-4 align-top text-slate-600 tabular-nums">
-                        {formatDate(task.dueDate)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+          {empSuccess && (
+            <div className="rounded-lg bg-emerald-50 p-3 text-sm text-emerald-800 border border-emerald-200">
+              {empSuccess}
             </div>
+          )}
+          
+          <p className="text-sm text-ink-500 mb-4">
+            They will receive the default password: <span className="font-medium text-ink-800">Welcome@123</span>
+          </p>
+
+          <Input
+            label="Full Name"
+            id="emp-name"
+            required
+            value={empName}
+            onChange={(e) => setEmpName(e.target.value)}
+            placeholder="Jane Doe"
+          />
+          <Input
+            label="Email Address"
+            id="emp-email"
+            type="email"
+            required
+            value={empEmail}
+            onChange={(e) => setEmpEmail(e.target.value)}
+            placeholder="jane@company.com"
+          />
+          
+          <div className="flex justify-end gap-3 mt-6">
+            <Button type="button" variant="ghost" onClick={() => setIsEmployeeModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" isLoading={empLoading}>
+              Add Employee
+            </Button>
           </div>
-        )}
-      </section>
-    </div>
+        </form>
+      </Modal>
+    </>
   )
 }
