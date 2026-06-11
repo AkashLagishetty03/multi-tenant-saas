@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { NavLink } from 'react-router-dom'
-import { LayoutDashboard, CheckSquare, ChevronLeft, ChevronRight, Briefcase } from 'lucide-react'
+import { LayoutDashboard, CheckSquare, ChevronLeft, ChevronRight, Briefcase, Activity, Building2 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 
 export function Sidebar() {
@@ -39,25 +39,60 @@ export function Sidebar() {
       </button>
 
       <nav className="flex flex-1 flex-col gap-1 p-3">
-        <NavLink
-          to="/"
-          end
-          className={({ isActive }) => `${linkBase} ${isActive ? active : inactive} ${collapsed ? 'justify-center px-0' : ''}`}
-          title={collapsed ? "Dashboard" : undefined}
-        >
-          <LayoutDashboard className="w-5 h-5 shrink-0" />
-          {!collapsed && <span>Dashboard</span>}
-        </NavLink>
-        
-        {/* Only admins might have access to full tasks list, employees usually have their own dashboard but we'll show Tasks based on their role if needed. The original logic showed Tasks for everyone. Let's preserve that. */}
-        <NavLink
-          to="/tasks"
-          className={({ isActive }) => `${linkBase} ${isActive ? active : inactive} ${collapsed ? 'justify-center px-0' : ''}`}
-          title={collapsed ? "Tasks" : undefined}
-        >
-          <CheckSquare className="w-5 h-5 shrink-0" />
-          {!collapsed && <span>Tasks</span>}
-        </NavLink>
+        {user?.role === 'administrator' ? (
+          <>
+            <NavLink
+              to="/administrator-dashboard"
+              end
+              className={({ isActive }) => `${linkBase} ${isActive ? active : inactive} ${collapsed ? 'justify-center px-0' : ''}`}
+              title={collapsed ? "Platform Overview" : undefined}
+            >
+              <Activity className="w-5 h-5 shrink-0" />
+              {!collapsed && <span>Platform Overview</span>}
+            </NavLink>
+            
+            <div className="mt-4 mb-2 px-3">
+              {!collapsed ? (
+                <p className="text-xs font-semibold text-ink-400 uppercase tracking-wider">Management</p>
+              ) : (
+                <div className="h-px bg-surface-200 w-full" />
+              )}
+            </div>
+            
+            <NavLink
+              to="/administrator-dashboard"
+              className={({ isActive }) => `${linkBase} ${window.location.pathname === '/administrator-dashboard' ? active : inactive} ${collapsed ? 'justify-center px-0' : ''}`}
+              title={collapsed ? "Organizations" : undefined}
+              onClick={(e) => {
+                // If we're already on the page, don't re-navigate to cause issues, but just act as a nice visual button
+              }}
+            >
+              <Building2 className="w-5 h-5 shrink-0" />
+              {!collapsed && <span>Organizations</span>}
+            </NavLink>
+          </>
+        ) : (
+          <>
+            <NavLink
+              to="/"
+              end
+              className={({ isActive }) => `${linkBase} ${isActive ? active : inactive} ${collapsed ? 'justify-center px-0' : ''}`}
+              title={collapsed ? "Dashboard" : undefined}
+            >
+              <LayoutDashboard className="w-5 h-5 shrink-0" />
+              {!collapsed && <span>Dashboard</span>}
+            </NavLink>
+            
+            <NavLink
+              to="/tasks"
+              className={({ isActive }) => `${linkBase} ${isActive ? active : inactive} ${collapsed ? 'justify-center px-0' : ''}`}
+              title={collapsed ? "Tasks" : undefined}
+            >
+              <CheckSquare className="w-5 h-5 shrink-0" />
+              {!collapsed && <span>Tasks</span>}
+            </NavLink>
+          </>
+        )}
       </nav>
 
       {!collapsed && (

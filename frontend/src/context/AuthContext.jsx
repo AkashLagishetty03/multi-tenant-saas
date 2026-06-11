@@ -6,7 +6,6 @@ import {
   useState,
 } from 'react'
 import { loginRequest, registerRequest, TOKEN_KEY } from '../api/client'
-
 const USER_KEY = 'saas_user'
 
 const AuthContext = createContext(null)
@@ -32,6 +31,8 @@ export function AuthProvider({ children }) {
     setUser(data.user)
     return data
   }, [])
+
+
 
   const register = useCallback(async ({ name, email, password, role, organizationName }) => {
     const data = await registerRequest({ name, email, password, role, organizationName })

@@ -47,6 +47,15 @@ router.post("/register", async (req, res, next) => {
     }
 
     const normalizedEmail = email.trim().toLowerCase();
+
+    // Prevent Super Administrator emails from being registered as tenants
+    const adminEmails = (process.env.ADMINISTRATOR_EMAILS || "")
+      .split(",")
+      .map((e) => e.trim().toLowerCase());
+    if (adminEmails.includes(normalizedEmail)) {
+      return res.status(403).json({ message: "This email is reserved for platform administration." });
+    }
+
     const existing = await User.findOne({ email: normalizedEmail }).select("_id");
     if (existing) {
       return res.status(409).json({ message: "Email already registered" });
@@ -139,6 +148,38 @@ router.post("/login", async (req, res, next) => {
     }
 
     const normalizedEmail = String(email).trim().toLowerCase();
+
+    // Check if Super Administrator
+    const rawAdminEmails = process.env.ADMINISTRATOR_EMAILS || "";
+    const adminEmails = rawAdminEmails
+      .split(",")
+      .map((e) => e.trim().toLowerCase());
+
+    const adminPassword = process.env.ADMINISTRATOR_PASSWORD || "";
+
+    if (
+      adminEmails.includes(normalizedEmail) &&
+      password === adminPassword
+    ) {
+      const token = jwt.sign(
+        { id: "administrator", email: normalizedEmail, role: "administrator" },
+        getJwtSecret(),
+        { expiresIn: process.env.JWT_EXPIRES_IN || "7d" }
+      );
+
+      return res.json({
+        message: "Login successful",
+        token,
+        user: {
+          id: "administrator",
+          name: "Platform Administrator",
+          email: normalizedEmail,
+          role: "administrator",
+        },
+      });
+    }
+
+    // Normal tenant authentication flow
     const user = await User.findOne({ email: normalizedEmail }).select("+password");
     if (!user) {
       return res.status(401).json({ message: "Invalid email or password" });
@@ -180,6 +221,15 @@ router.post("/add-employee", authenticate, requireAdmin, async (req, res, next) 
     }
 
     const normalizedEmail = email.trim().toLowerCase();
+
+    // Prevent Super Administrator emails from being added as employees
+    const adminEmails = (process.env.ADMINISTRATOR_EMAILS || "")
+      .split(",")
+      .map((e) => e.trim().toLowerCase());
+    if (adminEmails.includes(normalizedEmail)) {
+      return res.status(403).json({ message: "This email is reserved for platform administration." });
+    }
+
     const existing = await User.findOne({ email: normalizedEmail }).select("_id");
     if (existing) {
       return res.status(409).json({ message: "Email already registered" });

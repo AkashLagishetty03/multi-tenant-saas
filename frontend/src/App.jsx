@@ -8,10 +8,14 @@ import { RegisterPage } from './pages/RegisterPage'
 import { DashboardPage } from './pages/DashboardPage'
 import { TasksPage } from './pages/TasksPage'
 import { EmployeeDashboardPage } from './pages/EmployeeDashboardPage'
+import { AdministratorDashboardPage } from './pages/AdministratorDashboardPage'
 
 /** Redirects to the correct dashboard based on user role */
 function RoleHome() {
   const { user } = useAuth()
+  if (user?.role === 'administrator') {
+    return <Navigate to="/administrator-dashboard" replace />
+  }
   if (user?.role === 'employee') {
     return <Navigate to="/employee-dashboard" replace />
   }
@@ -26,6 +30,8 @@ export default function App() {
           <Routes>
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
+            <Route path="/workspace-login" element={<Navigate to="/login" replace />} />
+            <Route path="/administrator-login" element={<Navigate to="/login" replace />} />
             <Route
               element={
                 <ProtectedRoute>
@@ -36,6 +42,7 @@ export default function App() {
               <Route path="/" element={<RoleHome />} />
               <Route path="/tasks" element={<TasksPage />} />
               <Route path="/employee-dashboard" element={<EmployeeDashboardPage />} />
+              <Route path="/administrator-dashboard" element={<AdministratorDashboardPage />} />
             </Route>
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
