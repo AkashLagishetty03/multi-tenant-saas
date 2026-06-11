@@ -8,12 +8,83 @@ const Task = require("../models/Task");
 const router = express.Router();
 
 
+// Helper to perform the MongoDB aggregation pipeline for organizations
+async function getAggregatedOrganizations() {
+  return await Organization.aggregate([
+    {
+      $lookup: {
+        from: "users",
+        localField: "_id",
+        foreignField: "organizationId",
+        as: "users",
+      },
+    },
+    {
+      $project: {
+        _id: 1,
+        name: 1,
+        createdAt: 1,
+        status: { $literal: "Active" },
+        admins: {
+          $filter: {
+            input: "$users",
+            as: "user",
+            cond: { $eq: ["$$user.role", "admin"] },
+          },
+        },
+        employees: {
+          $filter: {
+            input: "$users",
+            as: "user",
+            cond: { $eq: ["$$user.role", "employee"] },
+          },
+        },
+      },
+    },
+    {
+      $project: {
+        _id: 1,
+        name: 1,
+        createdAt: 1,
+        status: 1,
+        admin: { $arrayElemAt: ["$admins", 0] },
+        employees: {
+          $map: {
+            input: "$employees",
+            as: "emp",
+            in: {
+              _id: "$$emp._id",
+              name: "$$emp.name",
+              email: "$$emp.email",
+              role: "$$emp.role",
+            },
+          },
+        },
+        totalEmployees: { $size: "$employees" },
+      },
+    },
+    {
+      $project: {
+        _id: 1,
+        name: 1,
+        createdAt: 1,
+        status: 1,
+        adminName: { $ifNull: ["$admin.name", null] },
+        adminEmail: { $ifNull: ["$admin.email", null] },
+        totalEmployees: 1,
+        employees: 1,
+      },
+    },
+  ]);
+}
+
 router.get("/stats", requireAdministratorAuth, async (req, res) => {
   try {
-    const totalOrganizations = await Organization.countDocuments();
-    const totalAdmins = await User.countDocuments({ role: "admin" });
-    const totalEmployees = await User.countDocuments({ role: "employee" });
-    const activeOrganizations = await Organization.countDocuments(); // Assume all are active for now
+    const orgs = await getAggregatedOrganizations();
+    const totalOrganizations = orgs.length;
+    const activeOrganizations = orgs.filter((o) => o.status === "Active").length;
+    const totalAdmins = orgs.filter((o) => o.adminName !== null).length;
+    const totalEmployees = orgs.reduce((sum, o) => sum + o.totalEmployees, 0);
 
     res.json({
       totalOrganizations,
@@ -30,26 +101,7 @@ router.get("/stats", requireAdministratorAuth, async (req, res) => {
 // GET /api/administrator/organizations
 router.get("/organizations", requireAdministratorAuth, async (req, res) => {
   try {
-    const organizations = await Organization.find().lean();
-    
-    const enrichedOrgs = await Promise.all(
-      organizations.map(async (org) => {
-        const admin = await User.findOne({ organization: org._id, role: "admin" }).lean();
-        const employees = await User.find({ organization: org._id, role: "employee" }).lean();
-        
-        return {
-          _id: org._id,
-          name: org.name,
-          createdAt: org.createdAt,
-          adminName: admin ? admin.name : "N/A",
-          adminEmail: admin ? admin.email : "N/A",
-          totalEmployees: employees.length,
-          employees: employees,
-          status: "Active"
-        };
-      })
-    );
-
+    const enrichedOrgs = await getAggregatedOrganizations();
     res.json(enrichedOrgs);
   } catch (error) {
     console.error("Error fetching organizations:", error);
@@ -69,10 +121,10 @@ router.delete("/organization/:id", requireAdministratorAuth, async (req, res) =>
     }
 
     // Delete all tasks associated with this organization
-    await Task.deleteMany({ organization: id });
+    await Task.deleteMany({ organizationId: id });
 
     // Delete all users associated with this organization (both admin and employees)
-    await User.deleteMany({ organization: id });
+    await User.deleteMany({ organizationId: id });
 
     // Delete the organization
     await Organization.findByIdAndDelete(id);

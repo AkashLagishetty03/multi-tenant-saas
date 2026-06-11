@@ -161,25 +161,51 @@ export function AdministratorDashboardPage() {
                   {expandedOrgId === org._id && (
                     <tr>
                       <td colSpan={5} className="bg-[var(--bg-primary)]/30 border-b border-[var(--border-color)] px-6 py-6">
-                        <div className="pl-4 border-l-2 border-[var(--accent-color)]/30 space-y-4">
-                          <h4 className="text-sm font-semibold text-[var(--text-primary)] uppercase tracking-wider">Employee Roster</h4>
-                          {org.employees && org.employees.length > 0 ? (
-                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                              {org.employees.map(emp => (
-                                <div key={emp._id} className="bg-[var(--bg-secondary)] border border-[var(--border-color)] p-4 rounded-xl flex items-center gap-3">
-                                  <div className="h-10 w-10 rounded-full bg-[var(--accent-color)]/10 text-[var(--accent-color)] flex items-center justify-center font-bold">
-                                    {emp.name.charAt(0)}
-                                  </div>
-                                  <div>
-                                    <p className="text-sm font-medium text-[var(--text-primary)]">{emp.name}</p>
-                                    <p className="text-xs text-[var(--text-secondary)]">{emp.email}</p>
-                                  </div>
-                                </div>
-                              ))}
+                        <div className="pl-4 border-l-2 border-[var(--accent-color)]/30 space-y-6">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                              <h4 className="text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wider mb-2">Organization Details</h4>
+                              <div className="space-y-1.5 text-sm">
+                                <p className="text-[var(--text-primary)]"><strong className="text-[var(--text-secondary)] font-medium">Name:</strong> {org.name}</p>
+                                <p className="text-[var(--text-primary)]"><strong className="text-[var(--text-secondary)] font-medium">ID:</strong> {org._id}</p>
+                                <p className="text-[var(--text-primary)]"><strong className="text-[var(--text-secondary)] font-medium">Status:</strong> {org.status}</p>
+                                <p className="text-[var(--text-primary)]">
+                                  <strong className="text-[var(--text-secondary)] font-medium">Created Date:</strong> {org.createdAt ? new Date(org.createdAt).toLocaleDateString() : 'N/A'}
+                                </p>
+                              </div>
                             </div>
-                          ) : (
-                            <p className="text-sm text-[var(--text-secondary)]">No employees registered for this organization.</p>
-                          )}
+                            <div>
+                              <h4 className="text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wider mb-2">Administrator Details</h4>
+                              <div className="space-y-1.5 text-sm">
+                                <p className="text-[var(--text-primary)]"><strong className="text-[var(--text-secondary)] font-medium">Name:</strong> {org.adminName || 'N/A'}</p>
+                                <p className="text-[var(--text-primary)]"><strong className="text-[var(--text-secondary)] font-medium">Email:</strong> {org.adminEmail || 'N/A'}</p>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="space-y-3">
+                            <h4 className="text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wider">Employee Roster</h4>
+                            {org.employees && org.employees.length > 0 ? (
+                              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                                {org.employees.map(emp => (
+                                  <div key={emp._id} className="bg-[var(--bg-secondary)] border border-[var(--border-color)] p-4 rounded-xl flex items-center gap-3">
+                                    <div className="h-10 w-10 rounded-full bg-[var(--accent-color)]/10 text-[var(--accent-color)] flex items-center justify-center font-bold">
+                                      {emp.name ? emp.name.charAt(0) : 'E'}
+                                    </div>
+                                    <div>
+                                      <p className="text-sm font-medium text-[var(--text-primary)]">{emp.name}</p>
+                                      <p className="text-xs text-[var(--text-secondary)]">{emp.email}</p>
+                                      <span className="inline-block text-[10px] uppercase font-bold tracking-wider text-[var(--accent-color)] bg-[var(--accent-color)]/10 px-2 py-0.5 rounded-full mt-1">
+                                        {emp.role}
+                                      </span>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <p className="text-sm text-[var(--text-secondary)]">No employees registered for this organization.</p>
+                            )}
+                          </div>
                         </div>
                       </td>
                     </tr>

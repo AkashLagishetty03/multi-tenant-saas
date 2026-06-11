@@ -15,9 +15,9 @@ const requireAdministratorAuth = (req, res, next) => {
 
     const adminEmails = (process.env.ADMINISTRATOR_EMAILS || "")
       .split(",")
-      .map((e) => e.trim());
+      .map((e) => e.trim().toLowerCase());
 
-    if (!adminEmails.includes(decoded.email)) {
+    if (!decoded.email || !adminEmails.includes(decoded.email.toLowerCase())) {
       return res.status(403).json({ message: "Forbidden: Email not authorized" });
     }
 
